@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>프로 전술판 - 리셋 기능 복구</title>
+    <title>프로 전술판 - 하이엔드 밸런스 에디션</title>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
         :root { 
@@ -11,20 +11,65 @@
             --pitch-dark: #276a2a; 
             --line: rgba(255,255,255,0.6); 
             --select-glow: 0 0 20px 8px #ffeb3b; 
+            /* 전체 높이 계산: 700(보드) + 15(상단패딩) + 40(하단패딩) + 2(테두리) = 757px */
+            --total-height: 757px;
         }
         
         body { font-family: -apple-system, sans-serif; margin: 0; background: #121212; color: white; display: flex; flex-direction: column; align-items: center; }
-        .header { width: 100%; background: #222; padding: 15px; text-align: center; font-weight: bold; border-bottom: 2px solid #333; }
+        .header { width: 100%; background: #222; padding: 15px; text-align: center; font-weight: bold; border-bottom: 2px solid #333; margin-bottom: 20px; }
         
-        .main-layout { display: flex; flex-wrap: wrap; justify-content: center; gap: 30px; padding: 20px; width: 100%; max-width: 1400px; align-items: flex-start; }
+        .main-layout { 
+            display: flex; 
+            justify-content: center; 
+            gap: 20px; 
+            padding: 0 20px 40px 20px; 
+            width: fit-content;
+            align-items: flex-start; /* 상단 정렬 */
+        }
         
-        .sidebar { width: 300px; display: flex; flex-direction: column; gap: 12px; }
+        /* 사이드바 높이를 전술보드와 동일하게 고정 */
+        .sidebar { 
+            width: 320px; 
+            height: var(--total-height); 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: space-between; /* 박스들을 위아래로 균등 분산 */
+            box-sizing: border-box;
+        }
+
         .box { background: #252525; padding: 15px; border-radius: 12px; border: 1px solid #333; }
 
+        /* 팝업 모달 */
+        .modal-overlay { 
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center; 
+        }
+        .modal-content { 
+            background: #252525; width: 90%; max-width: 450px; border-radius: 16px; 
+            border: 1px solid #444; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .modal-close { cursor: pointer; font-size: 24px; color: #aaa; }
+        
+        #squad-list-container { max-height: 400px; overflow-y: auto; }
+        .squad-item { 
+            display: flex; justify-content: space-between; align-items: center; 
+            background: #333; padding: 12px 15px; margin-bottom: 8px; border-radius: 8px; 
+        }
+
+        /* 경기장 영역 */
         .pitch-area { display: flex; flex-direction: column; align-items: center; }
-        .pitch-container { position: relative; background: #252525; padding: 15px 15px 40px 15px; border-radius: 16px; border: 1px solid #333; }
+        .pitch-container { 
+            position: relative; 
+            background: #252525; 
+            padding: 15px 15px 40px 15px; 
+            border-radius: 16px; 
+            border: 1px solid #333;
+            box-sizing: border-box;
+        }
         .pitch { 
-            width: 500px; height: 700px; 
+            width: 500px; 
+            height: 700px; 
             background-color: var(--pitch-green); 
             background-image: repeating-linear-gradient(0deg, var(--pitch-green), var(--pitch-green) 70px, var(--pitch-dark) 70px, var(--pitch-dark) 140px);
             position: relative; border: 3px solid white; border-radius: 8px; overflow: hidden; touch-action: none; 
@@ -35,72 +80,69 @@
         .player-icon { width: 44px; height: 44px; border-radius: 50%; border: 2.5px solid white; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 13px; color: white; pointer-events: none; }
         .player-name { background: rgba(0,0,0,0.85); color: white; font-size: 11px; padding: 3px 8px; border-radius: 4px; margin-top: 5px; white-space: nowrap; pointer-events: none; }
         
-        .color-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; width: 100%; }
-        .color-label { font-size: 13px; color: #aaa; flex-shrink: 0; }
-        .color-input-wrapper { flex-grow: 1; position: relative; display: flex; align-items: center; justify-content: flex-end; }
-        
-        input[type="color"] { 
-            -webkit-appearance: none; border: none; 
-            width: 20px; height: 20px; 
-            cursor: pointer; background: none; padding: 0;
-        }
-        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
-        input[type="color"]::-webkit-color-swatch { border: 2px solid white; border-radius: 50%; }
+        input[type="color"] { -webkit-appearance: none; border: none; width: 20px; height: 20px; cursor: pointer; background: none; padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: 1px solid white; border-radius: 50%; }
 
         input[type="text"], select, button { padding: 10px; border-radius: 6px; border: 1px solid #444; background: #333; color: white; width: 100%; margin-bottom: 8px; box-sizing: border-box; font-size: 14px; }
         button { cursor: pointer; background: #1a73e8; border: none; font-weight: bold; }
-        .btn-row { display: flex; gap: 5px; }
-        .squad-item { display: flex; justify-content: space-between; align-items: center; background: #333; padding: 8px; margin-top: 5px; border-radius: 4px; }
-        .squad-item button { width: auto; margin: 0; padding: 4px 10px; font-size: 12px; }
-        .btn-delete-main { background: #d93025 !important; }
+
+        .control-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 10px; }
+        .btn-save { background: #009688 !important; margin-bottom: 0 !important; }
+        .btn-reset { background: #555 !important; margin-bottom: 0 !important; }
+        .btn-view-list { background: #4285f4; margin-top: 5px; margin-bottom: 0; }
+        h4 { margin: 0 0 10px 0; font-size: 15px; }
     </style>
 </head>
 <body>
 
-<div class="header">🏟️ PRO TACTIC BOARD - PERFECT EDITION</div>
+<div class="header">🏟️ PRO TACTIC BOARD - PERFECT BALANCE</div>
 
 <div class="main-layout">
-
-        <div class="box">
-            <h4 style="margin:0 0 10px 0;">📂 스쿼드 저장소</h4>
-            <input type="text" id="squadName" placeholder="팀 이름 입력">
-            <button style="background:#ff9800;" onclick="saveCurrentSquad()">현재 스쿼드 저장</button>
-            <div id="squad-storage-list"></div>
-        </div>
     <div class="sidebar">
         <div class="box">
-            <h4 style="margin:0 0 10px 0;">✏️ 선수 이름 변경</h4>
+            <h4>📂 스쿼드 저장소</h4>
+            <input type="text" id="squadName" placeholder="팀 이름 입력">
+            <button style="background:#ff9800;" onclick="saveCurrentSquad()">현재 스쿼드 저장</button>
+            <button class="btn-view-list" onclick="toggleModal(true)">저장된 스쿼드 보기</button>
+        </div>
+
+        <div class="box">
+            <h4>✏️ 선수 이름 변경</h4>
             <input type="text" id="editName" placeholder="새 이름 입력">
             <button style="background:#673ab7;" onclick="changePlayerName()">이름 변경 적용</button>
         </div>
+
         <div class="box">
-            <h4 style="margin:0 0 10px 0;">🏃 선수 등록</h4>
+            <h4>🏃 선수 등록</h4>
             <input type="text" id="pName" placeholder="선수 이름">
             <select id="pPos">
                 <option value="FW">FW</option><option value="MF">MF</option>
                 <option value="DF">DF</option><option value="GK">GK</option>
             </select>
-            <div class="color-row">
-                <span class="color-label">유니폼 색상</span>
-                <div class="color-input-wrapper">
-                    <input type="color" id="pColor" value="#1a73e8">
-                </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                <span style="font-size:13px; color:#aaa;">유니폼 색상</span>
+                <input type="color" id="pColor" value="#1a73e8">
             </div>
             <button onclick="addNewPlayer()">경기장에 추가</button>
-            <button class="btn-delete-main" onclick="deleteSelectedPlayer()">선택한 선수 삭제</button>
+            <button style="background:#d93025; margin-bottom: 0;" onclick="deleteSelectedPlayer()">선택한 선수 삭제</button>
         </div>
 
         <div class="box">
-            <h4 style="margin:0 0 10px 0;">📋 빠른 포메이션</h4>
-            <div class="btn-row">
-                <button style="background:#34a853;" onclick="applyFormation('442')">442</button>
-                <button style="background:#34a853;" onclick="applyFormation('433')">433</button>
-                <button style="background:#34a853;" onclick="applyFormation('4231')">4231</button>
+            <h4>📋 빠른 포메이션</h4>
+            <div style="display:flex; gap:5px;">
+                <button style="background:#34a853; margin-bottom: 0;" onclick="applyFormation('442')">442</button>
+                <button style="background:#34a853; margin-bottom: 0;" onclick="applyFormation('433')">433</button>
+                <button style="background:#34a853; margin-bottom: 0;" onclick="applyFormation('4231')">4231</button>
             </div>
         </div>
 
-        <button style="background:#009688;" onclick="saveAsImage()">📸 이미지 저장</button>
-        <button style="background:#555;" onclick="resetPitch()">🔄 초기화</button>
+        <div class="box">
+            <h4>🎮 시스템 컨트롤</h4>
+            <div class="control-grid">
+                <button class="btn-save" onclick="saveAsImage()">📸 이미지 저장</button>
+                <button class="btn-reset" onclick="resetPitch()">🔄 리셋</button>
+            </div>
+        </div>
     </div>
 
     <div class="pitch-area">
@@ -115,29 +157,42 @@
     </div>
 </div>
 
+<div id="squadModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 style="margin:0;">📚 전술 라이브러리</h3>
+            <span class="modal-close" onclick="toggleModal(false)">&times;</span>
+        </div>
+        <div id="squad-list-container"></div>
+    </div>
+</div>
+
 <script>
     const pitch = document.getElementById('pitch');
     let selectedPlayer = null;
 
+    function toggleModal(show) {
+        document.getElementById('squadModal').style.display = show ? 'flex' : 'none';
+        if(show) renderSquadList();
+    }
+
     document.addEventListener('pointerdown', (e) => {
-        if (!e.target.closest('.player') && !e.target.closest('.box') && !e.target.closest('.btn-delete-main')) {
+        if (!e.target.closest('.player') && !e.target.closest('.box') && !e.target.closest('.modal-content')) {
             if (selectedPlayer) selectedPlayer.classList.remove('selected');
             selectedPlayer = null;
         }
     });
 
-    // 리셋 기능: 경기장 위의 모든 선수 요소 삭제
     function resetPitch() {
         if (confirm('경기장의 모든 선수를 삭제할까요?')) {
-            const players = pitch.querySelectorAll('.player');
-            players.forEach(p => p.remove());
+            pitch.querySelectorAll('.player').forEach(p => p.remove());
             selectedPlayer = null;
         }
     }
 
     function changePlayerName() {
         const newName = document.getElementById('editName').value;
-        if (!selectedPlayer) return alert("선수를 먼저 클릭하세요!");
+        if (!selectedPlayer) return alert("선수를 클릭하세요!");
         if (!newName) return alert("이름을 입력하세요!");
         selectedPlayer.querySelector('.player-name').innerText = newName;
         document.getElementById('editName').value = '';
@@ -210,7 +265,7 @@
 
     function applyFormation(type) {
         const chosenColor = document.getElementById('pColor').value;
-        Array.from(document.querySelectorAll('.player')).forEach(p => p.remove());
+        pitch.querySelectorAll('.player').forEach(p => p.remove());
         formations[type].forEach((pos, i) => createPlayerElement(`선수 ${i+1}`, pos.p, chosenColor, pos.l, pos.t));
         selectedPlayer = null;
     }
@@ -224,37 +279,38 @@
             color: p.querySelector('.player-icon').style.backgroundColor,
             left: p.style.left, top: p.style.top
         }));
-        const allSquads = JSON.parse(localStorage.getItem('my_squads_final_v3') || '{}');
+        const allSquads = JSON.parse(localStorage.getItem('my_squads_final_vMaster') || '{}');
         allSquads[sName] = players;
-        localStorage.setItem('my_squads_final_v3', JSON.stringify(allSquads));
-        renderSquadList(); document.getElementById('squadName').value = '';
+        localStorage.setItem('my_squads_final_vMaster', JSON.stringify(allSquads));
+        document.getElementById('squadName').value = '';
+        alert("스쿼드가 저장되었습니다.");
     }
 
     function renderSquadList() {
-        const listDiv = document.getElementById('squad-storage-list');
+        const listDiv = document.getElementById('squad-list-container');
         listDiv.innerHTML = '';
-        const allSquads = JSON.parse(localStorage.getItem('my_squads_final_v3') || '{}');
-        for (let name in allSquads) {
+        const allSquads = JSON.parse(localStorage.getItem('my_squads_final_vMaster') || '{}');
+        Object.keys(allSquads).forEach(name => {
             const item = document.createElement('div');
             item.className = 'squad-item';
-            item.innerHTML = `<span>${name}</span><div><button onclick="loadSquad('${name}')">열기</button><button style="background:red;" onclick="deleteSquad('${name}')">X</button></div>`;
+            item.innerHTML = `<span>${name}</span><div style="display:flex; gap:5px;"><button style="background:#1a73e8; width:60px;" onclick="loadSquad('${name}')">열기</button><button style="background:#d93025; width:40px;" onclick="deleteSquad('${name}')">X</button></div>`;
             listDiv.appendChild(item);
-        }
+        });
     }
 
     function loadSquad(name) {
-        const allSquads = JSON.parse(localStorage.getItem('my_squads_final_v3') || '{}');
+        const allSquads = JSON.parse(localStorage.getItem('my_squads_final_vMaster') || '{}');
         const squad = allSquads[name];
-        Array.from(document.querySelectorAll('.player')).forEach(p => p.remove());
+        pitch.querySelectorAll('.player').forEach(p => p.remove());
         squad.forEach(p => createPlayerElement(p.name, p.pos, p.color, p.left, p.top));
-        selectedPlayer = null;
+        selectedPlayer = null; toggleModal(false);
     }
 
     function deleteSquad(name) {
         if (confirm('삭제하시겠습니까?')) {
-            const allSquads = JSON.parse(localStorage.getItem('my_squads_final_v3') || '{}');
+            const allSquads = JSON.parse(localStorage.getItem('my_squads_final_vMaster') || '{}');
             delete allSquads[name];
-            localStorage.setItem('my_squads_final_v3', JSON.stringify(allSquads));
+            localStorage.setItem('my_squads_final_vMaster', JSON.stringify(allSquads));
             renderSquadList();
         }
     }
@@ -262,13 +318,9 @@
     function saveAsImage() {
         html2canvas(document.getElementById('capture-area')).then(canvas => {
             const link = document.createElement('a');
-            link.download = 'tactic_board_final.png'; link.href = canvas.toDataURL(); link.click();
+            link.download = 'tactic_board.png'; link.href = canvas.toDataURL(); link.click();
         });
     }
-
-    window.onload = renderSquadList;
 </script>
 </body>
 </html>
-
-
