@@ -60,12 +60,6 @@
 <div class="header">🏟️ PRO TACTIC BOARD - PERFECT EDITION</div>
 
 <div class="main-layout">
-    <div class="sidebar">
-        <div class="box">
-            <h4 style="margin:0 0 10px 0;">✏️ 선수 이름 변경</h4>
-            <input type="text" id="editName" placeholder="새 이름 입력">
-            <button style="background:#673ab7;" onclick="changePlayerName()">이름 변경 적용</button>
-        </div>
 
         <div class="box">
             <h4 style="margin:0 0 10px 0;">📂 스쿼드 저장소</h4>
@@ -73,7 +67,12 @@
             <button style="background:#ff9800;" onclick="saveCurrentSquad()">현재 스쿼드 저장</button>
             <div id="squad-storage-list"></div>
         </div>
-
+    <div class="sidebar">
+        <div class="box">
+            <h4 style="margin:0 0 10px 0;">✏️ 선수 이름 변경</h4>
+            <input type="text" id="editName" placeholder="새 이름 입력">
+            <button style="background:#673ab7;" onclick="changePlayerName()">이름 변경 적용</button>
+        </div>
         <div class="box">
             <h4 style="margin:0 0 10px 0;">🏃 선수 등록</h4>
             <input type="text" id="pName" placeholder="선수 이름">
@@ -271,4 +270,5 @@
 </script>
 </body>
 </html>
+
 
