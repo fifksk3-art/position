@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>프로 전술판 - 통합 관리 에디션</title>
+    <title>프로 전술판 - 개별 저장 에디션</title>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
         :root { 
@@ -46,16 +46,16 @@
         
         input[type="text"], select, button { padding: 9px; border-radius: 6px; border: 1px solid #444; background: #333; color: white; width: 100%; margin-bottom: 8px; box-sizing: border-box; font-size: 13px; }
         button { cursor: pointer; background: #1a73e8; border: none; font-weight: bold; }
-        button:active { opacity: 0.8; }
 
         .color-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
         input[type="color"] { -webkit-appearance: none; border: none; width: 22px; height: 22px; cursor: pointer; background: none; padding: 0; }
         input[type="color"]::-webkit-color-swatch { border: 1px solid white; border-radius: 50%; }
 
         .divider { border-top: 1px solid #333; margin: 12px 0; }
-        .control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .btn-save { background: #009688 !important; }
         .btn-reset { background: #555 !important; }
+        
+        /* 개별 저장 버튼 스타일 */
+        .btn-capture { background: #009688 !important; margin-top: 10px; }
 
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center; }
         .modal-content { background: #252525; width: 400px; border-radius: 16px; border: 1px solid #444; padding: 20px; }
@@ -64,7 +64,7 @@
 </head>
 <body>
 
-<div class="header">🏟️ DUAL TACTIC BOARD - UNIFIED EDITION</div>
+<div class="header">🏟️ DUAL TACTIC BOARD - INDIVIDUAL SAVE</div>
 
 <div class="main-layout">
     <div class="sidebar">
@@ -94,9 +94,7 @@
                 <input type="color" id="pColor" value="#1a73e8">
             </div>
             <button onclick="addNewPlayer()">경기장에 추가하기</button>
-            
             <div class="divider"></div>
-            
             <span class="sub-label">선택한 선수 수정</span>
             <input type="text" id="editName" placeholder="변경할 이름 입력">
             <div style="display: flex; gap: 5px; margin-bottom: 0;">
@@ -116,17 +114,14 @@
 
         <div class="box">
             <h4>🎮 시스템 컨트롤</h4>
-            <div class="control-grid">
-                <button class="btn-save" onclick="saveAsImage()">📸 통합 저장</button>
-                <button class="btn-reset" onclick="resetPitch()">🔄 리셋</button>
-            </div>
+            <button class="btn-reset" style="margin-bottom:0;" onclick="resetPitch()">🔄 현재 팀 리셋</button>
         </div>
     </div>
 
-    <div class="pitch-group" id="capture-area">
+    <div class="pitch-group">
         <div class="pitch-area">
             <div class="pitch-label">Home Team</div>
-            <div class="pitch-container">
+            <div id="capture-home" class="pitch-container">
                 <div id="pitch-home" class="pitch">
                     <div style="position:absolute; width:100%; top:50%; border-top:2px solid var(--line); pointer-events:none;"></div>
                     <div style="position:absolute; width:120px; height:120px; border:2px solid var(--line); border-radius:50%; top:50%; left:50%; transform:translate(-50%,-50%); pointer-events:none;"></div>
@@ -134,11 +129,12 @@
                     <div style="position:absolute; width:200px; height:80px; border:2px solid var(--line); bottom:0; left:50%; transform:translateX(-50%); pointer-events:none;"></div>
                 </div>
             </div>
+            <button class="btn-capture" onclick="saveIndividualImage('capture-home', 'home_tactic')">📸 홈 전술 저장</button>
         </div>
 
         <div class="pitch-area">
             <div class="pitch-label">Away Team</div>
-            <div class="pitch-container">
+            <div id="capture-away" class="pitch-container">
                 <div id="pitch-away" class="pitch">
                     <div style="position:absolute; width:100%; top:50%; border-top:2px solid var(--line); pointer-events:none;"></div>
                     <div style="position:absolute; width:120px; height:120px; border:2px solid var(--line); border-radius:50%; top:50%; left:50%; transform:translate(-50%,-50%); pointer-events:none;"></div>
@@ -146,6 +142,7 @@
                     <div style="position:absolute; width:200px; height:80px; border:2px solid var(--line); bottom:0; left:50%; transform:translateX(-50%); pointer-events:none;"></div>
                 </div>
             </div>
+            <button class="btn-capture" onclick="saveIndividualImage('capture-away', 'away_tactic')">📸 어웨이 전술 저장</button>
         </div>
     </div>
 </div>
@@ -216,13 +213,14 @@
     }
 
     function initDrag(el, pitchRef) {
-        let isDragging = false, startX, startY;
+        let isDragging = false, startX, startY, origX, origY;
         el.onpointerdown = (e) => {
             if (selectedPlayer) selectedPlayer.classList.remove('selected');
             selectedPlayer = el; el.classList.add('selected');
             isDragging = true; el.setPointerCapture(e.pointerId);
             const rect = el.getBoundingClientRect();
             startX = e.clientX - rect.left; startY = e.clientY - rect.top;
+            origX = el.style.left; origY = el.style.top;
         };
         el.onpointermove = (e) => {
             if (!isDragging) return;
@@ -233,7 +231,23 @@
             y = Math.max(-10, Math.min(y, pRect.height - 60));
             el.style.left = x + 'px'; el.style.top = y + 'px';
         };
-        el.onpointerup = (e) => { isDragging = false; };
+        el.onpointerup = (e) => {
+            if (!isDragging) return;
+            isDragging = false; el.releasePointerCapture(e.pointerId);
+            const targets = document.elementsFromPoint(e.clientX, e.clientY);
+            let targetPlayer = null;
+            for (const t of targets) {
+                const found = t.closest('.player');
+                if (found && found !== el && found.parentElement === pitchRef) {
+                    targetPlayer = found; break;
+                }
+            }
+            if (targetPlayer) {
+                const tx = targetPlayer.style.left; const ty = targetPlayer.style.top;
+                targetPlayer.style.left = origX; targetPlayer.style.top = origY;
+                el.style.left = tx; el.style.top = ty;
+            }
+        };
     }
 
     const formations = {
@@ -295,10 +309,11 @@
         }
     }
 
-    function saveAsImage() {
-        html2canvas(document.getElementById('capture-area')).then(canvas => {
+    // 개별 저장 함수
+    function saveIndividualImage(containerId, fileName) {
+        html2canvas(document.getElementById(containerId)).then(canvas => {
             const link = document.createElement('a');
-            link.download = 'home_away_tactic.png'; link.href = canvas.toDataURL(); link.click();
+            link.download = fileName + '.png'; link.href = canvas.toDataURL(); link.click();
         });
     }
 </script>
